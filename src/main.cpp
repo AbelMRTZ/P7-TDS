@@ -4,6 +4,7 @@
 #include <string>
 #include <iostream>
 #include <common.h>
+#include <limits>
 
 void ERRCHECK_FMOD (FMOD_RESULT result, const char * file, int line)
 {
@@ -13,6 +14,7 @@ void ERRCHECK_FMOD (FMOD_RESULT result, const char * file, int line)
 		exit(-1);
 	}
 }
+#undef ERRCHECK
 #define ERRCHECK(_result) ERRCHECK_FMOD(_result, __FILE__, __LINE__)
 
 FMOD_RESULT F_CALLBACK programmerSoundCallback(FMOD_STUDIO_EVENT_CALLBACK_TYPE type, FMOD_STUDIO_EVENTINSTANCE* event, void* parameters);
@@ -62,7 +64,7 @@ FMOD_RESULT F_CALLBACK programmerSoundCallback(FMOD_STUDIO_EVENT_CALLBACK_TYPE t
         // Creamos el objeto FMOD::Sound
         // info.exinfo: Metadatos acerca del sonido -> https://www.fmod.com/docs/2.02/api/core-api-system.html#fmod_createsoundexinfo
         FMOD::Sound* sound = nullptr;
-        CHECK_RESULT( context->coreSystem->createSound(info.name_or_data, FMOD_LOOP_NORMAL | FMOD_CREATECOMPRESSEDSAMPLE | FMOD_NONBLOCKING | info.mode, &info.exinfo, &sound) );
+        CHECK_RESULT( context->coreSystem->createSound(info.name_or_data, FMOD_LOOP_OFF | FMOD_CREATECOMPRESSEDSAMPLE | FMOD_NONBLOCKING | info.mode, &info.exinfo, &sound) );
 
         // Asociamos el objeto FMOD::Sound que queremos que se reproduzca al Programmer Instrument
         props->sound = (FMOD_SOUND*)sound;
@@ -85,7 +87,75 @@ FMOD_RESULT F_CALLBACK programmerSoundCallback(FMOD_STUDIO_EVENT_CALLBACK_TYPE t
     return FMOD_OK;
 }
 
-int main()
+// Compartida por ambos ejercicios: no cambiar de clave hasta terminar el audio.
+void playAndWait(FMOD::Studio::System* sys, FMOD::Studio::EventInstance* inst)
+{
+    ERRCHECK(inst->start());
+    FMOD_STUDIO_PLAYBACK_STATE state;
+    do
+    {
+        ERRCHECK(sys->update());
+        Common_Sleep(20);
+        ERRCHECK(inst->getPlaybackState(&state));
+    } while (state != FMOD_STUDIO_PLAYBACK_STOPPED);
+}
+
+void ejecutarDeletrear(FMOD::Studio::System* soundSystem, FMOD::System* coreSystem)
+{
+    FMOD::Studio::Bank* alphabetBank = nullptr;
+    ERRCHECK(soundSystem->loadBankFile("assets/FMOD_BANKS/Alphabet.bank",
+                                     FMOD_STUDIO_LOAD_BANK_NORMAL, &alphabetBank));
+
+    FMOD::Studio::EventDescription* deletrearDesc = nullptr;
+    ERRCHECK(soundSystem->getEvent("event:/Deletrear", &deletrearDesc));
+    FMOD::Studio::EventInstance* deletrear = nullptr;
+    ERRCHECK(deletrearDesc->createInstance(&deletrear));
+
+    static const char* const alfabeto[26] = {
+        "Alpha", "Bravo", "Charlie", "Delta", "Echo", "Foxtrot", "Golf", "Hotel",
+        "India", "Juliet", "Kilo", "Lima", "Mike", "November", "Oscar", "Papa",
+        "Quebec", "Romeo", "Sierra", "Tango", "Uniform", "Victor", "Whiskey",
+        "Xray", "Yankee", "Zulu"
+    };
+    // Contexto propio, independiente del utilizado por las patrullas.
+    ProgrammerSoundContext ctx = {coreSystem, soundSystem, alfabeto[0]};
+    ERRCHECK(deletrear->setUserData(&ctx));
+    ERRCHECK(deletrear->setCallback(programmerSoundCallback,
+        FMOD_STUDIO_EVENT_CALLBACK_CREATE_PROGRAMMER_SOUND |
+        FMOD_STUDIO_EVENT_CALLBACK_DESTROY_PROGRAMMER_SOUND));
+
+    std::string texto;
+    while (true)
+    {
+        std::cout << "Texto a deletrear (vacio para volver): " << std::flush;
+        if (!std::getline(std::cin, texto) || texto.empty()) break;
+
+        for (unsigned char c : texto)
+        {
+            // Solo A-Z: los audios no incluyen numeros, tildes ni enie.
+            if (c >= 'a' && c <= 'z') c = c - 'a' + 'A';
+            if (c >= 'A' && c <= 'Z')
+            {
+                ctx.dialogueString = alfabeto[c - 'A'];
+                std::cout << ctx.dialogueString << " " << std::flush;
+                playAndWait(soundSystem, deletrear);
+            }
+            else if (c == ' ')
+            {
+                Common_Sleep(400);
+            }
+        }
+        std::cout << std::endl;
+    }
+
+    // Procesar la liberacion antes de que el contexto local deje de existir.
+    ERRCHECK(deletrear->release());
+    ERRCHECK(soundSystem->flushCommands());
+    ERRCHECK(alphabetBank->unload());
+    ERRCHECK(soundSystem->flushCommands());
+}
+
+int main(int argc, char* argv[])
 {
     /* ************************
      Inicialización de FMOD 
@@ -111,6 +181,15 @@ int main()
     ERRCHECK(soundSystem->loadBankFile("assets/FMOD_BANKS/Master.strings.bank", FMOD_STUDIO_LOAD_BANK_NORMAL, &stringsBank) );
     ERRCHECK(soundSystem->loadBankFile("assets/FMOD_BANKS/Voices.bank", FMOD_STUDIO_LOAD_BANK_NORMAL, &voicesBank) );
     
+    // Permite probar la parte B sin cargar los bancos/eventos del ejercicio 1.
+    if (argc > 1 && std::string(argv[1]) == "--deletrear")
+    {
+        ejecutarDeletrear(soundSystem, coreSystem);
+        ERRCHECK(soundSystem->unloadAll());
+        ERRCHECK(soundSystem->release());
+        return 0;
+    }
+
     /* Array de bancos para diálogos localizados */
     unsigned int bankIndex = 0;
     static const char* const banks[] = { "assets/FMOD_BANKS/Dialogue_CT.bank", "assets/FMOD_BANKS/Dialogue_T.bank"};
@@ -177,15 +256,22 @@ int main()
         /* 3. Disparar el evento. */
         if (n==2)
         {
-            ERRCHECK( eventInstance->start() );
+            playAndWait(soundSystem, eventInstance);
         }
         
+        if (n == 3)
+        {
+            std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+            ejecutarDeletrear(soundSystem, coreSystem);
+        }
+
         /* Recordar: ¡¡ llamar a update() !! */
         ERRCHECK(soundSystem->update() );
 
         std::cout<< "Press 0 to change team" << std::endl;
         std::cout<< "Press 1 to change voice line" << std::endl;
         std::cout<< "Press 2 to play the event" << std::endl;
+        std::cout<< "Press 3 for Deletrear (ejercicio 2)" << std::endl;
         std::cout<<std::endl;
         std::cout<<"Team:"<<std::endl;
         std::string out1 = bankIndex == 0 ? ">" : " ";
@@ -203,7 +289,13 @@ int main()
         std::cout<<std::endl;
         std::cout<<"Press 8 to quit"<<std::endl;
 
-        std::cin >> n;
+        if (!(std::cin >> n))
+        {
+            if (std::cin.eof()) break;
+            std::cin.clear();
+            std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+            n = -1;
+        }
         std::cout << "\x1B[2J\x1B[H";
     }while (n != 8);
 
@@ -213,6 +305,7 @@ int main()
     ERRCHECK(localizedBank->unload());
     ERRCHECK(voicesBank->unload());
     ERRCHECK(soundSystem->unloadAll());
+    ERRCHECK(soundSystem->release());
 
     return 0;
 }
