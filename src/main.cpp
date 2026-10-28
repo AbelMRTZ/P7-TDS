@@ -190,32 +190,52 @@ int main(int argc, char* argv[])
         return 0;
     }
 
-    /* Array de bancos para diálogos localizados */
+    /* Array de bancos para diálogos localizados:
+       0 = patrulla del jugador (voz limpia), 1 = otra patrulla (voz por radio) */
     unsigned int bankIndex = 0;
-    static const char* const banks[] = { "assets/FMOD_BANKS/Dialogue_CT.bank", "assets/FMOD_BANKS/Dialogue_T.bank"};
-    
+    static const char* const banks[] = { "assets/FMOD_BANKS/Dialogue_Normal.bank", "assets/FMOD_BANKS/Dialogue_Radio.bank"};
+    static const char* const teamNames[] = { "Patrulla del jugador (Normal)", "Otra patrulla (Radio)" };
+
     /* Cargamos por defecto el primero de los bancos localizados */
     FMOD::Studio::Bank* localizedBank = nullptr;
     ERRCHECK(soundSystem->loadBankFile(banks[bankIndex], FMOD_STUDIO_LOAD_BANK_NORMAL, &localizedBank) );
 
+    /* Las dos versiones de un banco localizado no pueden estar cargadas a la vez:
+       hay que descargar una antes de cargar la otra. Solo se llama con el evento parado. */
+    auto cambiarPatrulla = [&](unsigned int nuevoIndex)
+    {
+        if (nuevoIndex == bankIndex) return;
+        ERRCHECK( localizedBank->unload() );
+        bankIndex = nuevoIndex;
+        ERRCHECK( soundSystem->loadBankFile(banks[bankIndex], FMOD_STUDIO_LOAD_BANK_NORMAL, &localizedBank) );
+    };
+
     /* **************************
-      Creacíon de una instancia del evento 'Dialogue': eventInstance
+      Creacíon de una instancia del evento 'Patrullas': eventInstance
     **************************** */
     FMOD::Studio::EventDescription* eventDescription = nullptr;
-    ERRCHECK(soundSystem->getEvent("event:/Dialogue", &eventDescription) );
+    ERRCHECK(soundSystem->getEvent("event:/Patrullas", &eventDescription) );
 
     FMOD::Studio::EventInstance* eventInstance = nullptr;
     ERRCHECK(eventDescription->createInstance(&eventInstance));
 
     /* ****************************
-      Definimos el array de claves para las tablas de audio 
+      Definimos el array de claves para las tablas de audio
       (debe corresponder con los archivos keys.txt que se definieron en FMOD Studio)
     ******************************* */
     unsigned int dialogueIndex = 0;
-    static const char* const dialogue[] = {"agree", "disagree", "smoke"};
+    static const char* const dialogue[] = {"Contact", "Coverme", "Holdtheperimeter", "ImMoving", "LetsGo", "WatchyouSector"};
+    static const char* const dialogueText[] = {"Contact!", "Cover me!", "Hold the perimeter!", "I'm moving!", "Let's go!", "Watch your sector!"};
+    const unsigned int numLines = sizeof(dialogue) / sizeof(dialogue[0]);
+
+    /* Conversación de ejemplo entre las dos patrullas: {quién habla, qué dice} */
+    struct Linea { unsigned int team; unsigned int line; };
+    static const Linea conversacion[] = {
+        {0, 0}, {1, 1}, {0, 3}, {1, 2}, {0, 4}, {1, 5}
+    };
 
     /* ****************************
-      Asignamos el callback al evento Dialogue.
+      Asignamos el callback al evento Patrullas.
       
       Ver https://www.fmod.com/docs/2.02/api/studio-api-eventinstance.html#fmod_studio_event_callback_type
       para los distintos tipos de callback definidos en FMOD (FMOD_STUDIO_EVENT_CALLBACK_TYPE)
@@ -229,27 +249,25 @@ int main(int argc, char* argv[])
     ERRCHECK( eventInstance->setCallback(programmerSoundCallback, FMOD_STUDIO_EVENT_CALLBACK_CREATE_PROGRAMMER_SOUND | FMOD_STUDIO_EVENT_CALLBACK_DESTROY_PROGRAMMER_SOUND) );
 
     /* ********************************
-      Este bucle realiza tres acciones relacionadas con el evento  Dialogue:
-      1. Seleccionar el banco del idioma elegido
+      Este bucle realiza las acciones relacionadas con el evento Patrullas:
+      1. Seleccionar la patrulla que habla (banco Normal o Radio)
       2. Seleccionar la entrada de la tabla a reproducir
       3. Disparar el evento.
+      4. Reproducir una conversación entre las dos patrullas
      ********************************* */
-    int n = 2;
+    int n = -1;
     do
     {
-        /*   1. Seleccionar el banco del idioma elegido */
+        /*   1. Seleccionar la patrulla que habla */
         if (n==0)
         {
-            ERRCHECK( localizedBank->unload() );
-
-            bankIndex = (bankIndex < 1) ? bankIndex + 1 : 0;
-            ERRCHECK( soundSystem->loadBankFile(banks[bankIndex], FMOD_STUDIO_LOAD_BANK_NORMAL, &localizedBank) );
+            cambiarPatrulla(bankIndex == 0 ? 1 : 0);
         }
 
         /* 2. Seleccionar la entrada de la tabla a reproducir */
         if (n==1)
         {
-            dialogueIndex = (dialogueIndex < 2) ? dialogueIndex + 1 : 0;
+            dialogueIndex = (dialogueIndex + 1) % numLines;
             programmerSoundContext.dialogueString = dialogue[dialogueIndex];
         }
 
@@ -265,6 +283,23 @@ int main(int argc, char* argv[])
             ejecutarDeletrear(soundSystem, coreSystem);
         }
 
+        /* 4. Conversación: cada línea con el banco de la patrulla que la dice */
+        if (n == 4)
+        {
+            unsigned int prevTeam = bankIndex, prevLine = dialogueIndex;
+            for (const Linea& l : conversacion)
+            {
+                cambiarPatrulla(l.team);
+                programmerSoundContext.dialogueString = dialogue[l.line];
+                std::cout << (l.team == 0 ? "[Jugador] " : "[Radio]   ") << dialogueText[l.line] << std::endl;
+                playAndWait(soundSystem, eventInstance);
+            }
+            // Volver a la selección que había en el menú
+            cambiarPatrulla(prevTeam);
+            dialogueIndex = prevLine;
+            programmerSoundContext.dialogueString = dialogue[dialogueIndex];
+        }
+
         /* Recordar: ¡¡ llamar a update() !! */
         ERRCHECK(soundSystem->update() );
 
@@ -272,20 +307,15 @@ int main(int argc, char* argv[])
         std::cout<< "Press 1 to change voice line" << std::endl;
         std::cout<< "Press 2 to play the event" << std::endl;
         std::cout<< "Press 3 for Deletrear (ejercicio 2)" << std::endl;
+        std::cout<< "Press 4 for a conversation between both patrols" << std::endl;
         std::cout<<std::endl;
         std::cout<<"Team:"<<std::endl;
-        std::string out1 = bankIndex == 0 ? ">" : " ";
-        std::cout<< out1 << " Counter_Terror team" <<std::endl;
-        out1 = bankIndex == 1 ? ">" : " ";
-        std::cout<< out1 << " Terror team" <<std::endl;
+        for (unsigned int i = 0; i < 2; i++)
+            std::cout << (bankIndex == i ? ">" : " ") << " " << teamNames[i] << std::endl;
         std::cout<<std::endl;
         std::cout<<"Line:"<<std::endl;
-        out1 = dialogueIndex == 0 ? ">" : " ";
-        std::cout<< out1 << " Agree!" <<std::endl;
-        out1 = dialogueIndex == 1 ? ">" : " ";
-        std::cout<< out1 << " Disagree!" <<std::endl;
-        out1 = dialogueIndex == 2 ? ">" : " ";
-        std::cout<< out1 << " Smoke!" <<std::endl;
+        for (unsigned int i = 0; i < numLines; i++)
+            std::cout << (dialogueIndex == i ? ">" : " ") << " " << dialogueText[i] << std::endl;
         std::cout<<std::endl;
         std::cout<<"Press 8 to quit"<<std::endl;
 
