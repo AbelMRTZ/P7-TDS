@@ -1,0 +1,3 @@
+agree,t_agree.wav
+disagree,t_disagree.wav
+smoke,t_smoke.wav

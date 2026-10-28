@@ -1,0 +1,13 @@
+#!/bin/bash
+
+LIB_FMODSTUDIO=$HOME/ua/tds/libs/FMOD_Programmers_API_2.02.18/api/studio/lib/
+LIB_FMODCORE=$HOME/ua/tds/libs/FMOD_Programmers_API_2.02.18/api/core/lib/
+
+INC_FMODSTUDIO=$HOME/ua/tds/libs/FMOD_Programmers_API_2.02.18/api/studio/inc
+INC_FMODCORE=$HOME/ua/tds/libs/FMOD_Programmers_API_2.02.18/api/core/inc
+
+g++ -std=c++17 -o bin/game main.cpp common.cpp common_platform.cpp -I . -I $INC_FMODSTUDIO -I $INC_FMODCORE -L $LIB_FMODSTUDIO -L $LIB_FMODCORE -lfmod -lfmodstudio 
+#-lGL -lm -lpthread -ldl -lrt -lX11 
+cp -r assets bin/ 
+export LD_LIBRARY_PATH=$LIB_FMODSTUDIO:$LIB_FMODCORE:$LD_LIBRARY_PATH
+./bin/game

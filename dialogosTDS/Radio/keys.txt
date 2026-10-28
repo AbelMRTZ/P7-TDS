@@ -1,0 +1,6 @@
+Contact,DIALOGUE_SQUAD_1Contact.wav
+Coverme,DIALOGUE_SQUAD_1Coverme.wav
+Holdtheperimeter,DIALOGUE_SQUAD_1Holdtheperimeter.wav
+ImMoving,DIALOGUE_SQUAD_1ImMoving.wav
+LetsGo,DIALOGUE_SQUAD_1LetsGo.wav
+WatchyouSector,DIALOGUE_SQUAD_1WatchyouSector.wav

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objects serializationModel="Studio.02.02.00">
+	<object class="Locale" id="{c030434c-6e58-4bae-bdcc-1c714cbcd2c2}">
+		<property name="name">
+			<value>Team</value>
+		</property>
+		<property name="localeCode">
+			<value>T</value>
+		</property>
+	</object>
+</objects>
