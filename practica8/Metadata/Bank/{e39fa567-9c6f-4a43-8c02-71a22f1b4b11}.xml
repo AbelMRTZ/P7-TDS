@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objects serializationModel="Studio.02.03.00">
+	<object class="Bank" id="{e39fa567-9c6f-4a43-8c02-71a22f1b4b11}">
+		<property name="name">
+			<value>Alphabet</value>
+		</property>
+		<relationship name="folder">
+			<destination>{7ff3e9ef-f221-489c-a827-d3dfc91a6d55}</destination>
+		</relationship>
+		<relationship name="audioTable">
+			<destination>{a59db1e6-526d-47d5-ada6-fc00e21b40da}</destination>
+		</relationship>
+	</object>
+	<object class="AudioTable" id="{a59db1e6-526d-47d5-ada6-fc00e21b40da}">
+		<property name="name">
+			<value>Audio Table</value>
+		</property>
+		<property name="sourceDirectory">
+			<value>../dialogosTDS/Alphabet01</value>
+		</property>
+	</object>
+</objects>

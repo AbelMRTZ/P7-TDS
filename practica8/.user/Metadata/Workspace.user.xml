@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objects serializationModel="Studio.02.03.00">
+	<object class="Workspace" id="{98d485db-ea79-40c0-879c-d835427f66b0}">
+		<relationship name="projectSettings">
+			<destination>{69f2b3a3-52a4-4104-9967-f00f15c9926e}</destination>
+		</relationship>
+	</object>
+	<object class="ProjectSettings" id="{69f2b3a3-52a4-4104-9967-f00f15c9926e}">
+		<property name="windowLayout">
+			<value>AAAAAQAAABwARQB2AGUAbgB0ACAARQBkAGkAdABvAHIAIAAyAAAAQgHZ0MsAAwAAAAAAAAAAAB4AAAWfAAADSwAAAZAAAADFAAAFXgAAAlAAAAAAAgAAAAWgAAAAAAAAADoAAAWfAAADSw==</value>
+		</property>
+		<relationship name="activeLocale">
+			<destination>{59ac12f6-c900-452c-843b-a46411b4ce9a}</destination>
+		</relationship>
+		<relationship name="activePlatform">
+			<destination>{563a8e6c-f855-4d57-935c-49cfc2332037}</destination>
+		</relationship>
+	</object>
+</objects>

@@ -202,13 +202,32 @@ Las claves distinguen mayúsculas y minúsculas: es `Xray` (no `X-ray`) y `Watch
 
 ### 6.2 Definir las localizaciones
 
-1. *Edit → Preferences → Build* (en macOS: *FMOD Studio → Preferences → Build*).
-2. En el apartado **Locales**, añadir dos:
-   - Nombre `Normal`, **código `Normal`**
-   - Nombre `Radio`, **código `Radio`**
-3. Si aparece alguna localización por defecto, borrarla.
+**Qué es esto:** una lista de "idiomas" del proyecto. Un juego normal pondría `Español` e `Inglés`. Nosotros no tenemos idiomas, así que nos los inventamos: un "idioma" llamado `Normal` (voz limpia) y otro llamado `Radio` (voz de walkie).
 
-> **Clave:** el **código** tiene que ser idéntico al nombre de la carpeta (`dialogosTDS/Normal`, `dialogosTDS/Radio`), porque FMOD lo pega al final de la ruta de la tabla.
+**Por qué hace falta:** en el paso 6.3 le diremos a FMOD que busque los audios en `dialogosTDS`. FMOD coge esa ruta y le pega detrás cada "idioma" de esta lista:
+
+```
+dialogosTDS  +  /Normal  →  dialogosTDS/Normal   (esta carpeta existe)
+dialogosTDS  +  /Radio   →  dialogosTDS/Radio    (esta carpeta existe)
+```
+
+Si en la lista pusiéramos otra cosa (por ejemplo `Limpio`), FMOD buscaría `dialogosTDS/Limpio`, que no existe, y no encontraría nada.
+
+**Cómo se hace:**
+
+1. Abrir las preferencias: en macOS, menú *FMOD Studio → Preferences* (o `Cmd + ,`); en Windows, *Edit → Preferences*.
+2. Ir a la pestaña **Build**.
+3. Buscar el apartado **Locales**. Es una lista con dos columnas: **Name** y **Code**.
+4. Pulsar **+** dos veces y rellenar:
+
+   | Name | Code |
+   |---|---|
+   | `Normal` | `Normal` |
+   | `Radio` | `Radio` |
+
+5. Si ya había alguna fila de antes, borrarla.
+
+La columna **Name** es solo una etiqueta. La que importa es **Code**: tiene que coincidir letra por letra con el nombre de las carpetas, mayúsculas incluidas. Ese código es también el que aparece al final de los bancos compilados (`Dialogue_Normal.bank`, `Dialogue_Radio.bank`).
 
 ### 6.3 Crear los bancos
 
